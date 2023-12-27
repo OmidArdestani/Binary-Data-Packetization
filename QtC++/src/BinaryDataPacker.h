@@ -1,40 +1,29 @@
 #include <QObject>
 
+#include "PacketBuilders/PacketBuilder.h"
+#include "HeaderBuilders/HeaderBuilder.h"
 
-class IHeaderBuilder;
-class IPacketBuilder;
+#include "HeaderBuilders/ConstHeader.h"
+#include "HeaderBuilders/ValidationHeader/Checksum.h"
+#include "HeaderBuilders/ValidationHeader/CRC8.h"
+#include "HeaderBuilders/ValidationHeader/CRC16.h"
+#include "HeaderBuilders/ValidationHeader/CRC32.h"
+#include "HeaderBuilders/ValidationHeader/CRC64.h"
+#include "HeaderBuilders/ValidationHeader/Hash.h"
+#include "HeaderBuilders/ValidationHeader/XOR.h"
 
-namespace HeaderBuilder{
-    class ConstHeader;
+#include "PacketBuilders/Compressors/Arithmetic.h"
+#include "PacketBuilders/Compressors/DEFLATE.h"
+#include "PacketBuilders/Compressors/Huffman.h"
+#include "PacketBuilders/Compressors/JPEG.h"
 
-	namespace ValidationHeader{
-		class Checksum;
-		class CRC8;
-		class CRC16;
-		class CRC32;
-		class CRC64;
-		class Hash;
-		class XOr;
-    }
-}
-
-namespace PacketBuilder{
-	namespace Encryption{
-        class RSA;
-		class DES;
-		class AES;
-		class TwoFish;
-    }
-	namespace Compressor{
-        class DEFLATE;
-		class Huffman;
-        class Arithmetic;
-		class JPEG;
-    }
-}
+#include "PacketBuilders/Encryptions/AES.h"
+#include "PacketBuilders/Encryptions/DES.h"
+#include "PacketBuilders/Encryptions/RSA.h"
+#include "PacketBuilders/Encryptions/TwoFish.h"
 
 
-class BinaryDataPacker: public QObject
+class BinaryDataPacker
 {
 public:
 	BinaryDataPacker();
