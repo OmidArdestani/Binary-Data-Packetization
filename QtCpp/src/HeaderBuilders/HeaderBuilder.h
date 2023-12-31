@@ -3,7 +3,7 @@
 class IHeaderBuilder
 {
 public:
-    virtual void BuildHeader(const char* body_data, int size, char* result_buffer, int& result_size) = 0;
-    virtual bool CheckHeader(const char* packet_data, int size) = 0;
+    virtual void BuildHeader(const char* body_data, int size, char*& result_buffer, int& result_size) = 0;
+    virtual bool CheckHeader(const char* packet_data, int size, char*& result_buffer, int& result_size) = 0;
 };
 #endif

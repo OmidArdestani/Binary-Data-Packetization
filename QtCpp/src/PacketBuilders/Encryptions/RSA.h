@@ -17,15 +17,15 @@ public:
 
     // IPacketBuilder interface
 public:
-    void PackData(const char *raw_data, int raw_data_size, char *packed_data, int &packed_size) override;
-    void UnpackData(const char *packed_data, int size, char *unpacked_data, int &unpacked_size) override;
+    void PackData(const char *raw_data, int raw_data_size, char *&packed_data, int &packed_size) override;
+    void UnpackData(const char *packed_data, int size, char *&unpacked_data, int &unpacked_size) override;
 
 private:
+    bool IsPrime(int num);
     int GCD(int a, int b);
     int GenerateRandomPrime();
-    bool IsPrime(int num);
-    int Encrypt(int message, int public_key, int n);
-    int Decrypt(int encryptedMessage, int private_key, int n);
+    uint16_t Encrypt(unsigned char message, int public_key, int n);
+    char Decrypt(uint16_t encryptedMessage, int private_key, int n);
 
 private:
     int PublicKey = -1;

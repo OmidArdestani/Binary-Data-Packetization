@@ -20,26 +20,37 @@ PacketBuilder::Encryption::CRSA::CRSA(int public_key, int private_key, int n):
 }
 
 
-void PacketBuilder::Encryption::CRSA::PackData(const char *raw_data, int raw_data_size, char *packed_data, int &packed_size)
+void PacketBuilder::Encryption::CRSA::PackData(const char *raw_data, int raw_data_size, char *&packed_data, int &packed_size)
 {
-    packed_data = static_cast<char*>(std::malloc(raw_data_size));
-    packed_size = raw_data_size;
+    auto packed_data_temp = static_cast<char*>(std::malloc(raw_data_size * 2));
+    auto int_packed_data = reinterpret_cast<uint16_t*>(packed_data_temp);
 
-    for(int i = 0; i < raw_data_size; i += sizeof(int))
+    for(int i = 0; i < raw_data_size; ++i)
     {
-        packed_data[i] = Encrypt((int)(raw_data[i]), PublicKey, N);
+        int_packed_data[i] = 0;
+        auto ev = Encrypt(raw_data[i], PublicKey, N);
+        int_packed_data[i] = ev;
     }
+
+    packed_size = raw_data_size * 2;
+    packed_data = packed_data_temp;
 }
 
-void PacketBuilder::Encryption::CRSA::UnpackData(const char *packed_data, int size, char *unpacked_data, int &unpacked_size)
+void PacketBuilder::Encryption::CRSA::UnpackData(const char *packed_data, int size, char *&unpacked_data, int &unpacked_size)
 {
-    unpacked_data = static_cast<char*>(std::malloc(size));
-    unpacked_size = size;
+    auto unpacked_data_temp = static_cast<char*>(std::malloc(size / 2));
+    auto int_packed_data = reinterpret_cast<const uint16_t*>(packed_data);
+    int int_packed_data_size = size / 2;
 
-    for(int i = 0; i < size; i += sizeof(int))
+    for(int i = 0; i < int_packed_data_size; ++i)
     {
-        unpacked_data[i] = Decrypt((int)(packed_data[i]), PrivateKey, N);
+        unpacked_data_temp[i] = 0;
+        auto dv = Decrypt(int_packed_data[i], PrivateKey, N);
+        unpacked_data_temp[i] = dv;
     }
+
+    unpacked_size = size / 2;
+    unpacked_data = unpacked_data_temp;
 }
 
 // Function to calculate GCD of two numbers
@@ -105,12 +116,37 @@ bool PacketBuilder::Encryption::CRSA::ValidateKeys(int public_key, int private_k
     return (public_key > 1 && public_key < phi && GCD(public_key, phi) == 1 && (private_key * public_key) % phi == 1);
 }
 
+#include <iostream>
+
+// Function to calculate (base^exponent) % modulus
+long long mod_exp(long long base, long long exponent, long long modulus) {
+    long long result = 1;
+    base = base % modulus;  // Ensure base is within the modulus range
+
+    while (exponent > 0) {
+        // If exponent is odd, multiply result with base
+        if (exponent % 2 == 1) {
+            result = (result * base) % modulus;
+        }
+
+        // Exponent must be even now
+        exponent = exponent / 2;
+        base = (base * base) % modulus;
+    }
+
+    return result;
+}
+
 // Function to Encrypt a message
-int PacketBuilder::Encryption::CRSA::Encrypt(int message, int public_key, int n) {
-    return static_cast<int>(pow(message, public_key)) % n;
+uint16_t PacketBuilder::Encryption::CRSA::Encrypt(unsigned char message, int public_key, int n)
+{
+    uint64_t result = mod_exp(message,public_key,n);
+    return static_cast<uint16_t>(result);
 }
 
 // Function to Decrypt a message
-int PacketBuilder::Encryption::CRSA::Decrypt(int encryptedMessage, int private_key, int n) {
-    return static_cast<int>(pow(encryptedMessage, private_key)) % n;
+char PacketBuilder::Encryption::CRSA::Decrypt(uint16_t encrypted_message, int private_key, int n)
+{
+    uint64_t result = mod_exp(encrypted_message,private_key,n);
+    return static_cast<char>(result);
 }

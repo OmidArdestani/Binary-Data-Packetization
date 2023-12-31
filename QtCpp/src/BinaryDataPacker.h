@@ -32,8 +32,8 @@ public:
     void AddPacketBuilder(IPacketBuilder* packet_builder);
     void AddSOFBuilder(IHeaderBuilder* header_builder);
     void AddEOFBuilder(IHeaderBuilder* header_builder);
-    void GetPacket(const char* raw_data,int size,char* result_buffer,int& result_size);
-    void UnpackData(const char* packed_data, int packet_size,char* result_buffer,int& result_size);
+    void GetPacket(const char* raw_data,int size,char*& result_buffer,int& result_size);
+    void UnpackData(const char* packed_data, int packet_size,char*& result_buffer,int& result_size);
 
 private:
     std::list<IHeaderBuilder*> SOFs;

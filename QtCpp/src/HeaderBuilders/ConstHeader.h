@@ -20,8 +20,8 @@ private:
 
     // IHeaderBuilder interface
 public:
-    void BuildHeader(const char *body_data, int size, char *result_buffer, int& result_size) override;
-    bool CheckHeader(const char *packet_data, int size) override;
+    void BuildHeader(const char *body_data, int size, char *&result_buffer, int& result_size) override;
+    bool CheckHeader(const char *packet_data, int size, char*& result_buffer, int& result_size) override;
 };
 }
 #endif
