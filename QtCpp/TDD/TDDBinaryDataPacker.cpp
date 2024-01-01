@@ -15,9 +15,9 @@ private:
     CBinaryDataPacker* BuildPacker(IHeaderBuilder* header,IPacketBuilder* body, IHeaderBuilder* footer)
     {
         CBinaryDataPacker* bdp = new CBinaryDataPacker();
-        bdp->AddSOFBuilder(header);
+        bdp->SetSOFBuilder(header);
         bdp->AddPacketBuilder(body);
-        bdp->AddEOFBuilder(footer);
+        // bdp->AddEOFBuilder(footer);
         return bdp;
     }
 

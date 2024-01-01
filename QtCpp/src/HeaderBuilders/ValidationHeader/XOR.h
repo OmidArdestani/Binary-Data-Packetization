@@ -13,6 +13,7 @@ public:
 public:
     void BuildHeader(const char *body_data, int size, char *&result_buffer, int &result_size) override;
     bool CheckHeader(const char *packet_data, int size, char*& result_buffer, int& result_size) override;
+    EHeaderType GetType() override{return EHeaderType::Xor;}
 };
 }
 }

@@ -12,8 +12,15 @@ void HeaderBuilder::CConstHeader::BuildHeader(const char *body_data, int size, c
 {
     auto result_buffer_temp = static_cast<char*>(std::malloc(size + ConstHeaderSize));
 
-    std::memcpy(result_buffer_temp,ConstHeader,ConstHeaderSize);
-    std::memcpy(result_buffer_temp + ConstHeaderSize,body_data,size);
+    if(HeaderPostion == EHeaderPostion::StartOfFrame)
+    {
+        std::memcpy(result_buffer_temp,ConstHeader,ConstHeaderSize);
+        std::memcpy(result_buffer_temp + ConstHeaderSize,body_data,size);
+    }
+    else
+    {
+
+    }
 
     result_size = size + ConstHeaderSize;
     result_buffer = result_buffer_temp;
@@ -34,10 +41,19 @@ bool HeaderBuilder::CConstHeader::CheckHeader(const char *packet_data, int size,
         {
             auto result_size_temp = size - ConstHeaderSize;
             auto result_buffer_temp = static_cast<char*>(std::malloc(result_size_temp));
-            std::memcpy(result_buffer_temp, (packet_data + i + 1), result_size_temp);
 
-            result_size = result_size_temp;
-            result_buffer = result_buffer_temp;
+            if(HeaderPostion == EHeaderPostion::StartOfFrame)
+            {
+                std::memcpy(result_buffer_temp, (packet_data + i + 1), result_size_temp);
+
+                result_size = result_size_temp;
+                result_buffer = result_buffer_temp;
+            }
+            else
+            {
+
+            }
+
             return true;
         }
     }
