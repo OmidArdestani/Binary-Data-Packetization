@@ -26,10 +26,10 @@
 #define BODY_SIZE_NUMBER_OF_BITS 14
 #define MAX_PACKET_SIZE (int)std::pow(2, BODY_SIZE_NUMBER_OF_BITS)
 
-class CBinaryDataPacker
+class CBinaryDataPacketizer
 {
 public:
-    CBinaryDataPacker(){}
+    CBinaryDataPacketizer(){}
 
     void GetPacket(const char* raw_data,int size,char*& result_buffer,int& result_size);
     void UnpackData(const char* packed_data, int packet_size,char*& result_buffer,int& result_size);
@@ -46,7 +46,7 @@ private:
                 uint8_t EOFHeaderType:3;
                 uint16_t BodySize : BODY_SIZE_NUMBER_OF_BITS;
             };
-            uint32_t Value;
+            uint32_t Value = 0;
         };
 
         SAdditionalInfo(){Value = 0;}

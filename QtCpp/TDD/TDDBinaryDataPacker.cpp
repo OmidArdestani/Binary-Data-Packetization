@@ -12,16 +12,16 @@ private:
     const char* RawData = "this is a message for packaging test.";
     const int RawDataSize = (int)strlen(RawData);
 
-    CBinaryDataPacker* BuildPacker(IHeaderBuilder* header,IPacketBuilder* body, IHeaderBuilder* footer)
+    CBinaryDataPacketizer* BuildPacker(IHeaderBuilder* header,IPacketBuilder* body, IHeaderBuilder* footer)
     {
-        CBinaryDataPacker* bdp = new CBinaryDataPacker();
+        CBinaryDataPacketizer* bdp = new CBinaryDataPacketizer();
         bdp->SetSOFBuilder(header);
         bdp->AddPacketBuilder(body);
         // bdp->AddEOFBuilder(footer);
         return bdp;
     }
 
-    void VerifyResult(CBinaryDataPacker* bdp)
+    void VerifyResult(CBinaryDataPacketizer* bdp)
     {
         char* packet_to_send = nullptr;
         int packet_size = -1;
