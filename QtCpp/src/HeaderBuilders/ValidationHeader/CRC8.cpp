@@ -8,23 +8,23 @@ HeaderBuilder::ValidationHeader::CCRC8::CCRC8():IHeaderBuilder()
 
 void HeaderBuilder::ValidationHeader::CCRC8::BuildHeader(const char *body_data, int size, char *&result_buffer, int &result_size)
 {
+    auto crc_value = CalculateCRC8(body_data, size);
+    int crc_size = sizeof(crc_value);
+
+    char* result_buffer_temp = static_cast<char*>(std::malloc(size + crc_size));
+
     if(HeaderPostion == EHeaderPostion::StartOfFrame)
     {
-        auto crc_value = CalculateCRC8(body_data, size);
-        int crc_size = sizeof(crc_value);
-
-        char* result_buffer_temp = static_cast<char*>(std::malloc(size + crc_size));
-
         std::memcpy(result_buffer_temp, &crc_value, crc_size);
         std::memcpy(result_buffer_temp + crc_size, body_data, size);
-
-        result_buffer = result_buffer_temp;
-        result_size = size + crc_size;
     }
     else
     {
-
+        std::memcpy(result_buffer_temp, body_data, size);
+        std::memcpy(result_buffer_temp + size, &crc_value, crc_size);
     }
+    result_buffer = result_buffer_temp;
+    result_size = size + crc_size;
 }
 
 bool HeaderBuilder::ValidationHeader::CCRC8::CheckHeader(const char *packet_data, int size, char*& result_buffer, int& result_size)
