@@ -12,55 +12,111 @@ The Packetization Module is a versatile tool developed in C++, C#, and Python fo
 
 - **Compression:** The module supports data compression, optimizing bandwidth usage and transmission efficiency.
 
+- **Low Dependency:** This module depend on no external library.
+
 - **Multi-language Support:** Developed in C++, C#, and Python, making it accessible and integrable into a variety of projects and platforms.
+
+- **Data Streaming:** This modul support data streaming to gadering and detect header and extreact expected data.
 
 ## Getting Started
 
 ### Prerequisites
 
-- [C++ Compiler](link_to_compiler)
-- [.NET Framework](link_to_dotnet) (for C#)
-- [Python](link_to_python) (for Python)
+- [C++ Compiler](https://github.com/OmidArdestani/BinaryDataPacketization/tree/main/QtCpp)
+- [.NET Framework](https://github.com/OmidArdestani/BinaryDataPacketization/tree/main/C%23) (for C#)
+- [Python](https://github.com/OmidArdestani/BinaryDataPacketization/tree/main/Python) (for Python)
+- [Java](https://github.com/OmidArdestani/BinaryDataPacketization/tree/main/Java) (for Java)
 
 ### Usage
- 1. Include the Module:
-    * For C++, include the header file in your project:
-    ```bash
-    char* rawData = { /* Your raw data here */ };
-    packetizer.PackData(rawData);
-    ```
-    * For C#, add the module to your project references:
-    ```bash
-    char* rawData = { /* Your raw data here */ };
-    packetizer.PackData(rawData);
-    ```
-    * For Python, import the module:
- 3. Create an Instance:
+
+ 1. Create an Instance:
     * C++
     ```bash
-    BinaryDataPacketization packetizer;
+    CBinaryDataPacketizer *packetizer = new BinaryDataPacketizer();
     ```
     * C#
     ```bash
-    BinaryDataPacketization packetizer = new PacketizationModule();
+    BinaryDataPacketizer packetizer = new BinaryDataPacketizer();
     ```
     * Python
     ```bash
-    packetizer = BinaryDataPacketization()
+    packetizer = BinaryDataPacketizer()
     ```
- 5. Pack Data:
- 6. Customize and Transmit:
+    * Java
+    ```bash
+    BinaryDataPacketizer packetizer = new BinaryDataPacketizer();
+    ```
+ 2. Initialize:
+    * C++
+    ```bash
+    packetizer->SetSOFBuilder(/*One Header Builder*/);
+    packetizer->AddEOFBuilder(/*One Header Builder*/);
+    packetizer->AddPacketBuilder(/*One Packet Builder*/);
+    ```
+    * C#
+    ```bash
+    packetizer.SetSOFBuilder(/*One Header Builder*/);
+    packetizer.AddEOFBuilder(/*One Header Builder*/);
+    packetizer.AddPacketBuilder(/*One Packet Builder*/);
+    ```
+    * Python
+    ```bash
+    packetizer.SetSOFBuilder(/*One Header Builder*/)
+    packetizer.AddEOFBuilder(/*One Header Builder*/)
+    packetizer.AddPacketBuilder(/*One Packet Builder*/)
+    ```
+    * Java
+    ```bash
+    packetizer.SetSOFBuilder(/*One Header Builder*/);
+    packetizer.AddEOFBuilder(/*One Header Builder*/);
+    packetizer.AddPacketBuilder(/*One Packet Builder*/);
+    ```
+ 3. Pack Data:
+    * C++
+    ```bash
+    packetizer->GetPacket(/*raw_data*/, /*raw_data_size*/, /*result*/, /*result_size*/);
+    ```
+    * C#
+    ```bash
+    byte[] result = packetizer.SetSOFBuilder(/*raw_data*/);
+    ```
+    * Python
+    ```bash
+    result = packetizer.SetSOFBuilder(/*raw_data*/)
+    ```
+    * Java
+    ```bash
+    byte[] result = packetizer.SetSOFBuilder(/*raw_data*/);
+    ```    
+ 5. Unpack Data:
+    * C++
+    ```bash
+    packetizer->UnpackData(/*packed_data*/, /*packed_data_size*/, /*result*/, /*result_size*/);
+    ```
+    * C#
+    ```bash
+    byte[] result = packetizer.UnpackData(/*packed_data*/);
+    ```
+    * Python
+    ```bash
+    result = packetizer.UnpackData(/*packed_data*/)
+    ```
+    * Java
+    ```bash
+    byte[] result = packetizer.UnpackData(/*packed_data*/);
+    ```
 
 ### Advanced Usage
+
  * Customizing Headers and Footers: The module provides flexibility in defining header and footer types. Explore the documentation for details on customizing these components based on your application's needs.
  * Configuring Encryption: To enable encryption, set the encryption parameters using the provided API. Refer to the documentation for a comprehensive guide on configuring encryption.
  * Optimizing Compression: Fine-tune the compression settings to balance between compression ratio and computational overhead. The documentation contains information on optimizing compression for various scenarios.
 
 ## Library Class Diagram (UML)
+
 ![Binary Data Packetization Class Diagram](https://github.com/OmidArdestani/BinaryDataPacketization/blob/main/Document/DataPacker.jpg)
 
 Clone the repository to your local machine:
-
 ```bash
-git clone https://github.com/yourusername/packetization-module.git
+git clone https://github.com/OmidArdestani/BinaryDataPacketization.git
 ```
