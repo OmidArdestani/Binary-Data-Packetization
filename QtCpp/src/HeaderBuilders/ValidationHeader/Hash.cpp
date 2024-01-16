@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <sstream>
 #include <vector>
+#include <array>
 
 HeaderBuilder::ValidationHeader::CHashSHA256::CHashSHA256():IHeaderBuilder()
 {
@@ -59,7 +60,7 @@ inline uint32_t gamma1(uint32_t x) {
     return rotr(x, 17) ^ rotr(x, 19) ^ (x >> 10);
 }
 
-void HeaderBuilder::ValidationHeader::CHashSHA256::CalcSha256(const char* input, int size,char*& result, int result_size)
+void HeaderBuilder::ValidationHeader::CHashSHA256::CalcSha256(const char* input, int size, char*& result, int& result_size)
 {
     // Initial hash values
     uint32_t h[8] = {
@@ -93,15 +94,15 @@ void HeaderBuilder::ValidationHeader::CHashSHA256::CalcSha256(const char* input,
         uint32_t e = h[4];
         uint32_t f = h[5];
         uint32_t g = h[6];
-        uint32_t h = h[7];
+        uint32_t h_ = h[7];
 
         // Main loop
         for (size_t j = 0; j < 64; ++j)
         {
-            uint32_t t1 = h + sigma1(e) + ch(e, f, g) + K[j] + w[j];
+            uint32_t t1 = h_ + sigma1(e) + ch(e, f, g) + K[j] + w[j];
             uint32_t t2 = sigma0(a) + maj(a, b, c);
 
-            h = g;
+            h_ = g;
             g = f;
             f = e;
             e = d + t1;
@@ -119,7 +120,7 @@ void HeaderBuilder::ValidationHeader::CHashSHA256::CalcSha256(const char* input,
         h[4] += e;
         h[5] += f;
         h[6] += g;
-        h[7] += h;
+        h[7] += h_;
     }
 
     // Combine the hash values into the final hash
@@ -129,8 +130,10 @@ void HeaderBuilder::ValidationHeader::CHashSHA256::CalcSha256(const char* input,
         sha_result << std::hex << std::setw(8) << std::setfill('0') << value;
     }
 
-    result = sha_result.str().c_str();
-    result_size = sha_result.str().length();
+    result_size = (int)sha_result.str().length();
+    result = static_cast<char*>(std::malloc(result_size));
+
+    std::memcpy(result, sha_result.str().c_str(), result_size);
 }
 
 
@@ -144,13 +147,13 @@ void HeaderBuilder::ValidationHeader::CHashSHA256::BuildHeader(const char *body_
     char* result_buffer_temp = static_cast<char*>(std::malloc(size + hash_size));
     if(HeaderPostion == EHeaderPostion::StartOfFrame)
     {
-        std::memcpy(result_buffer_temp, &hash_result, hash_size);
+        std::memcpy(result_buffer_temp, hash_result, hash_size);
         std::memcpy(result_buffer_temp + hash_size, body_data, size);
     }
     else
     {
         std::memcpy(result_buffer_temp, body_data, size);
-        std::memcpy(result_buffer_temp + size, &hash_result, hash_size);
+        std::memcpy(result_buffer_temp + size, hash_result, hash_size);
     }
     result_buffer = result_buffer_temp;
     result_size = size + hash_size;
@@ -160,11 +163,12 @@ bool HeaderBuilder::ValidationHeader::CHashSHA256::CheckHeader(const char *packe
 {
     if(HeaderPostion == EHeaderPostion::StartOfFrame)
     {
-        unsigned char packet_crc_value = packet_data[0];
-        int hash_size = sizeof(packet_crc_value);
-        auto crc_value = CalcSha256(packet_data + hash_size, size - hash_size);
+        int hash_size = HashSize;
+        char* hash_result = nullptr;
+        CalcSha256(packet_data + hash_size, size - hash_size, hash_result, hash_size);
 
-        if(crc_value == packet_crc_value)
+        auto r = std::memcmp((const char*)hash_result, (const char*)packet_data, size_t(hash_size));
+        if(!r)
         {
             char* result_buffer_temp = static_cast<char*>(std::malloc(size - hash_size));
 

@@ -14,9 +14,10 @@ public:
     void BuildHeader(const char *body_data, int size, char *&result_buffer, int &result_size) override;
     bool CheckHeader(const char *packet_data, int size, char*& result_buffer, int& result_size) override;
     EHeaderType GetType() override{return EHeaderType::Hash;}
+    const int HashSize = 64;
 
 private:
-    void CalcSha256(const char *input, int size, char *&result, int result_size);
+    void CalcSha256(const char *input, int size, char *&result, int& result_size);
 };
 }
 }
