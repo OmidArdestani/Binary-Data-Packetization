@@ -83,18 +83,18 @@ void CBinaryDataPacketizer::GetPacket(const char *raw_data, int size, char *&res
 
 void CBinaryDataPacketizer::UnpackData(const char *packed_data, int packet_size, char *&result_buffer, int &result_size)
 {
-    // remove footer
-    if(EOFHeaderBuilder)
-    {
-        if(!EOFHeaderBuilder->CheckHeader(packed_data, packet_size, result_buffer, result_size))
-            return; // the footer is not correct
-    }
-
     // remove header
     if(SOFHeaderBuilder)
     {
         if(!SOFHeaderBuilder->CheckHeader(packed_data, packet_size, result_buffer, result_size))
             return; // the header is not correct
+    }
+
+    // remove footer
+    if(EOFHeaderBuilder)
+    {
+        if(!EOFHeaderBuilder->CheckHeader(packed_data, packet_size, result_buffer, result_size))
+            return; // the footer is not correct
     }
 
     ExtractAdditionalInfo(result_buffer, result_size, result_buffer, result_size);
