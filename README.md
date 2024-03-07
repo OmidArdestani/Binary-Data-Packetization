@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Packetization Module is a versatile tool developed in C++, C#, and Python for packing raw data into a structured format suitable for transmission over Ethernet or other communication channels. The module adds a customizable header and footer to the raw data, supporting multiple types of headers and footers. Additionally, it provides options for encrypting and compressing the data body, enhancing the efficiency and security of data transmission.
+The Packetization Module is a versatile tool developed in C++, C#, Java, and Python for packing raw data into a structured format suitable for transmission over Ethernet or other communication channels. The module adds a customizable header and footer to the raw data, supporting multiple types of headers and footers. Additionally, it provides options for encrypting and compressing the data body, enhancing the efficiency and security of data transmission.
 
 ## Features
 
