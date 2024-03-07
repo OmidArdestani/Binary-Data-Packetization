@@ -1,4 +1,4 @@
-# Packetization Module
+# Binary Data Packetization Module
 
 ## Overview
 
