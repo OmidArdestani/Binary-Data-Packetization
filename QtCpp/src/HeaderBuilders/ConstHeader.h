@@ -1,7 +1,6 @@
 #ifndef CCONSTHEADER_H
 #define CCONSTHEADER_H
-#include <string>
-#include <iostream>
+#include <cstring>
 
 #include "HeaderBuilder.h"
 

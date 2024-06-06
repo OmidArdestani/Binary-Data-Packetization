@@ -1,5 +1,7 @@
 #include "XOR.h"
 
+#include <cstring>
+
 HeaderBuilder::ValidationHeader::CXOR::CXOR():IHeaderBuilder()
 {
 

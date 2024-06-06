@@ -1,6 +1,8 @@
 QT += core widgets testlib
 
 
+CONFIG += c++17
+
 SOURCES +=\
         TDDBinaryDataPacker.cpp
 

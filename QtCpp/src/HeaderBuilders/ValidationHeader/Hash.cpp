@@ -1,9 +1,9 @@
 #include "Hash.h"
 
+#include <cstring>
 #include <iostream>
 #include <iomanip>
 #include <sstream>
-#include <vector>
 #include <array>
 
 HeaderBuilder::ValidationHeader::CHashSHA256::CHashSHA256():IHeaderBuilder()

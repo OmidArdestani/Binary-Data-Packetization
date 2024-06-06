@@ -1,5 +1,7 @@
 #include "CRC64.h"
 
+#include <cstring>
+
 HeaderBuilder::ValidationHeader::CCRC64::CCRC64():IHeaderBuilder()
 {
 

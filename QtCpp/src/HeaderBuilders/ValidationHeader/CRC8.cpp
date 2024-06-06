@@ -1,5 +1,7 @@
 #include "CRC8.h"
 
+#include <cstring>
+
 HeaderBuilder::ValidationHeader::CCRC8::CCRC8():IHeaderBuilder()
 {
 

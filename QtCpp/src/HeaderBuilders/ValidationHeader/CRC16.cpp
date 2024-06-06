@@ -1,5 +1,6 @@
 #include "CRC16.h"
 
+#include <cstring>
 
 HeaderBuilder::ValidationHeader::CCRC16::CCRC16():IHeaderBuilder()
 {

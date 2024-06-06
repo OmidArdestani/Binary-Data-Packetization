@@ -1,5 +1,7 @@
 #include "Checksum.h"
 
+#include <cstring>
+
 HeaderBuilder::ValidationHeader::CChecksum::CChecksum():IHeaderBuilder()
 {
 

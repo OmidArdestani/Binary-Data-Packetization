@@ -1,4 +1,5 @@
 #include "ConstHeader.h"
+#include <cstdlib>
 
 HeaderBuilder::CConstHeader::CConstHeader(const char *header, int size):
     IHeaderBuilder(),

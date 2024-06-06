@@ -1,4 +1,7 @@
 #include "AES.h"
+#include <cstdio>
+#include <cstring>
+#include <stdexcept>
 
 /*******************************
  * This emplimentation comes from SergeyBel.
@@ -22,14 +25,14 @@ PacketBuilder::Encryption::CAES::CAES(const PacketBuilder::Encryption::CAES::EAE
 
 void PacketBuilder::Encryption::CAES::PackData(const char *raw_data, int raw_data_size, char *&packed_data, int &packed_size)
 {
-    auto result = EncryptECB(reinterpret_cast<unsigned char*>(raw_data), raw_data_size, EncryptionKey);
+    auto result = EncryptECB(reinterpret_cast<const unsigned char*>(raw_data), raw_data_size, EncryptionKey);
     packed_data = reinterpret_cast<char*>(result);
     packed_size = raw_data_size;
 }
 
 void PacketBuilder::Encryption::CAES::UnpackData(const char *packed_data, int size, char *&unpacked_data, int &unpacked_size)
 {
-    auto result = DecryptECB(reinterpret_cast<unsigned char*>(packed_data), size, EncryptionKey);
+    auto result = DecryptECB(reinterpret_cast<const unsigned char*>(packed_data), size, EncryptionKey);
     unpacked_data = reinterpret_cast<char*>(result);
     unpacked_size = size;
 }
@@ -59,22 +62,26 @@ void PacketBuilder::Encryption::CAES::Init()
     }
 }
 
-unsigned char *PacketBuilder::Encryption::CAES::EncryptECB(const unsigned char in[], unsigned int inLen, const unsigned char key[])
-{
-    CheckLength(inLen);
-    unsigned char *out = new unsigned char[inLen];
+unsigned char *PacketBuilder::Encryption::CAES::EncryptECB(const unsigned char in[], unsigned int inLen, const unsigned char key[]) {
+    unsigned int paddedLen = inLen + (blockBytesLen - inLen % blockBytesLen);
+    unsigned char *paddedIn = new unsigned char[paddedLen];
+    memcpy(paddedIn, in, inLen);
+    memset(paddedIn + inLen, paddedLen - inLen, paddedLen - inLen);
+
+    unsigned char *out = new unsigned char[paddedLen];
     unsigned char *roundKeys = new unsigned char[4 * Nb * (Nr + 1)];
     KeyExpansion(key, roundKeys);
-    for (unsigned int i = 0; i < inLen; i += blockBytesLen)
-        EncryptBlock(in + i, out + i, roundKeys);
+    for (unsigned int i = 0; i < paddedLen; i += blockBytesLen) {
+        EncryptBlock(paddedIn + i, out + i, roundKeys);
+    }
 
     delete[] roundKeys;
+    delete[] paddedIn;
 
     return out;
 }
 
 unsigned char *PacketBuilder::Encryption::CAES::DecryptECB(const unsigned char in[], unsigned int inLen, const unsigned char key[]) {
-    CheckLength(inLen);
     unsigned char *out = new unsigned char[inLen];
     unsigned char *roundKeys = new unsigned char[4 * Nb * (Nr + 1)];
     KeyExpansion(key, roundKeys);
@@ -82,99 +89,129 @@ unsigned char *PacketBuilder::Encryption::CAES::DecryptECB(const unsigned char i
         DecryptBlock(in + i, out + i, roundKeys);
     }
 
-    delete[] roundKeys;
+    unsigned int padding = out[inLen - 1];
+    if (padding < 1 || padding > blockBytesLen) {
+        padding = 0;
+    }
 
-    return out;
+    unsigned int dataLen = inLen - padding;
+    unsigned char *unpaddedOut = new unsigned char[dataLen];
+    memcpy(unpaddedOut, out, dataLen);
+
+    delete[] roundKeys;
+    delete[] out;
+
+    return unpaddedOut;
 }
 
-unsigned char *PacketBuilder::Encryption::CAES::EncryptCBC(const unsigned char in[], unsigned int inLen,
-                               const unsigned char key[],
-                               const unsigned char *iv) {
-    CheckLength(inLen);
-    unsigned char *out = new unsigned char[inLen];
-    unsigned char block[blockBytesLen];
+
+unsigned char *PacketBuilder::Encryption::CAES::EncryptCBC(const unsigned char in[], unsigned int inLen, const unsigned char key[], const unsigned char *iv) {
+    unsigned int paddedLen = inLen + (blockBytesLen - inLen % blockBytesLen);
+    unsigned char *paddedIn = new unsigned char[paddedLen];
+    memcpy(paddedIn, in, inLen);
+    memset(paddedIn + inLen, paddedLen - inLen, paddedLen - inLen);
+
+    unsigned char *out = new unsigned char[paddedLen];
     unsigned char *roundKeys = new unsigned char[4 * Nb * (Nr + 1)];
+    unsigned char *block = new unsigned char[blockBytesLen];
+    unsigned char *currentIv = new unsigned char[blockBytesLen];
+    memcpy(currentIv, iv, blockBytesLen);
     KeyExpansion(key, roundKeys);
-    memcpy(block, iv, blockBytesLen);
-    for (unsigned int i = 0; i < inLen; i += blockBytesLen) {
-        XorBlocks(block, in + i, block, blockBytesLen);
+
+    for (unsigned int i = 0; i < paddedLen; i += blockBytesLen) {
+        XorBlocks(currentIv, paddedIn + i, block, blockBytesLen);
         EncryptBlock(block, out + i, roundKeys);
-        memcpy(block, out + i, blockBytesLen);
+        memcpy(currentIv, out + i, blockBytesLen);
     }
 
     delete[] roundKeys;
+    delete[] paddedIn;
+    delete[] block;
+    delete[] currentIv;
 
     return out;
 }
 
-unsigned char *PacketBuilder::Encryption::CAES::DecryptCBC(const unsigned char in[], unsigned int inLen,
-                               const unsigned char key[],
-                               const unsigned char *iv)
-{
-    CheckLength(inLen);
+unsigned char *PacketBuilder::Encryption::CAES::DecryptCBC(const unsigned char in[], unsigned int inLen, const unsigned char key[], const unsigned char *iv) {
     unsigned char *out = new unsigned char[inLen];
-    unsigned char block[blockBytesLen];
     unsigned char *roundKeys = new unsigned char[4 * Nb * (Nr + 1)];
+    unsigned char *block = new unsigned char[blockBytesLen];
+    unsigned char *currentIv = new unsigned char[blockBytesLen];
+    memcpy(currentIv, iv, blockBytesLen);
     KeyExpansion(key, roundKeys);
-    memcpy(block, iv, blockBytesLen);
+
     for (unsigned int i = 0; i < inLen; i += blockBytesLen) {
-        DecryptBlock(in + i, out + i, roundKeys);
-        XorBlocks(block, out + i, out + i, blockBytesLen);
-        memcpy(block, in + i, blockBytesLen);
+        DecryptBlock(in + i, block, roundKeys);
+        XorBlocks(currentIv, block, out + i, blockBytesLen);
+        memcpy(currentIv, in + i, blockBytesLen);
     }
 
-    delete[] roundKeys;
+    unsigned int padding = out[inLen - 1];
+    if (padding < 1 || padding > blockBytesLen) {
+        padding = 0;
+    }
 
-    return out;
+    unsigned int dataLen = inLen - padding;
+    unsigned char *unpaddedOut = new unsigned char[dataLen];
+    memcpy(unpaddedOut, out, dataLen);
+
+    delete[] roundKeys;
+    delete[] out;
+    delete[] block;
+    delete[] currentIv;
+
+    return unpaddedOut;
 }
 
-unsigned char *PacketBuilder::Encryption::CAES::EncryptCFB(const unsigned char in[], unsigned int inLen,
-                               const unsigned char key[],
-                               const unsigned char *iv)
-{
-    CheckLength(inLen);
+
+unsigned char *PacketBuilder::Encryption::CAES::EncryptCFB(const unsigned char in[], unsigned int inLen, const unsigned char key[], const unsigned char *iv) {
     unsigned char *out = new unsigned char[inLen];
-    unsigned char block[blockBytesLen];
-    unsigned char encryptedBlock[blockBytesLen];
     unsigned char *roundKeys = new unsigned char[4 * Nb * (Nr + 1)];
+    unsigned char *block = new unsigned char[blockBytesLen];
+    unsigned char *currentIv = new unsigned char[blockBytesLen];
+    memcpy(currentIv, iv, blockBytesLen);
     KeyExpansion(key, roundKeys);
-    memcpy(block, iv, blockBytesLen);
+
     for (unsigned int i = 0; i < inLen; i += blockBytesLen) {
-        EncryptBlock(block, encryptedBlock, roundKeys);
-        XorBlocks(in + i, encryptedBlock, out + i, blockBytesLen);
-        memcpy(block, out + i, blockBytesLen);
+        EncryptBlock(currentIv, block, roundKeys);
+        unsigned int blockSize = (inLen - i >= blockBytesLen) ? blockBytesLen : (inLen - i);
+        XorBlocks(in + i, block, out + i, blockSize);
+        memcpy(currentIv, out + i, blockBytesLen);
     }
 
     delete[] roundKeys;
+    delete[] block;
+    delete[] currentIv;
 
     return out;
 }
 
-unsigned char *PacketBuilder::Encryption::CAES::DecryptCFB(const unsigned char in[], unsigned int inLen,
-                               const unsigned char key[],
-                               const unsigned char *iv) {
-    CheckLength(inLen);
+unsigned char *PacketBuilder::Encryption::CAES::DecryptCFB(const unsigned char in[], unsigned int inLen, const unsigned char key[], const unsigned char *iv) {
     unsigned char *out = new unsigned char[inLen];
-    unsigned char block[blockBytesLen];
-    unsigned char encryptedBlock[blockBytesLen];
     unsigned char *roundKeys = new unsigned char[4 * Nb * (Nr + 1)];
+    unsigned char *block = new unsigned char[blockBytesLen];
+    unsigned char *currentIv = new unsigned char[blockBytesLen];
+    memcpy(currentIv, iv, blockBytesLen);
     KeyExpansion(key, roundKeys);
-    memcpy(block, iv, blockBytesLen);
+
     for (unsigned int i = 0; i < inLen; i += blockBytesLen) {
-        EncryptBlock(block, encryptedBlock, roundKeys);
-        XorBlocks(in + i, encryptedBlock, out + i, blockBytesLen);
-        memcpy(block, in + i, blockBytesLen);
+        EncryptBlock(currentIv, block, roundKeys);
+        unsigned int blockSize = (inLen - i >= blockBytesLen) ? blockBytesLen : (inLen - i);
+        XorBlocks(in + i, block, out + i, blockSize);
+        memcpy(currentIv, in + i, blockBytesLen);
     }
 
     delete[] roundKeys;
+    delete[] block;
+    delete[] currentIv;
 
     return out;
 }
+
 
 void PacketBuilder::Encryption::CAES::CheckLength(unsigned int len) {
-    if (len % blockBytesLen != 0) {
-        throw std::length_error("Plaintext length must be divisible by " +
-                                std::to_string(blockBytesLen));
+    if (len == 0) {
+        throw std::length_error("Plaintext length must be greater than 0");
     }
 }
 

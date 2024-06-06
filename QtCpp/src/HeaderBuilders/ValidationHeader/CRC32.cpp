@@ -1,5 +1,7 @@
 #include "CRC32.h"
 
+#include <cstring>
+
 HeaderBuilder::ValidationHeader::CCRC32::CCRC32():IHeaderBuilder()
 {
 
