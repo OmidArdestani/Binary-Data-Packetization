@@ -9,7 +9,7 @@ class TDDBinaryDataPacker: public QObject
     Q_OBJECT
 
 private:
-    const char* RawData = "this is a message for packaging test.";
+    const char* RawData = "this is a message for packaging test .";
     const int RawDataSize = (int)strlen(RawData);
 
     CBinaryDataPacketizer* BuildPacker(IHeaderBuilder* header,IPacketBuilder* body, IHeaderBuilder* footer)

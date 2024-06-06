@@ -25,16 +25,79 @@ PacketBuilder::Encryption::CAES::CAES(const PacketBuilder::Encryption::CAES::EAE
 
 void PacketBuilder::Encryption::CAES::PackData(const char *raw_data, int raw_data_size, char *&packed_data, int &packed_size)
 {
-    auto result = EncryptECB(reinterpret_cast<const unsigned char*>(raw_data), raw_data_size, EncryptionKey);
-    packed_data = reinterpret_cast<char*>(result);
-    packed_size = raw_data_size;
+    // Convert raw_data (char*) to uint16_t* for encryption
+    std::vector<uint8_t> raw_data_bytes(reinterpret_cast<const uint8_t*>(raw_data), reinterpret_cast<const uint8_t*>(raw_data) + raw_data_size);
+    auto uint16_data = toUint16Array(raw_data_bytes.data(), raw_data_bytes.size());
+
+    // Perform encryption
+    auto result = EncryptECB(uint16_data.data(), uint16_data.size(), EncryptionKey);
+
+    // Convert the result back to char*
+    auto result_bytes = toUint8Array(result.data(), result.size());
+    packed_data = new char[result_bytes.size()];
+    std::memcpy(packed_data, result_bytes.data(), result_bytes.size());
+    packed_size = result_bytes.size();
 }
 
 void PacketBuilder::Encryption::CAES::UnpackData(const char *packed_data, int size, char *&unpacked_data, int &unpacked_size)
 {
-    auto result = DecryptECB(reinterpret_cast<const unsigned char*>(packed_data), size, EncryptionKey);
-    unpacked_data = reinterpret_cast<char*>(result);
-    unpacked_size = size;
+    // Convert packed_data (char*) to uint16_t* for decryption
+    std::vector<uint8_t> packed_data_bytes(reinterpret_cast<const uint8_t*>(packed_data), reinterpret_cast<const uint8_t*>(packed_data) + size);
+    auto uint16_data = toUint16Array(packed_data_bytes.data(), packed_data_bytes.size());
+
+    // Perform decryption
+    auto result = DecryptECB(uint16_data.data(), uint16_data.size(), EncryptionKey);
+
+    // Convert the result back to char*
+    auto result_bytes = toUint8Array(result.data(), result.size());
+    unpacked_data = new char[result_bytes.size()];
+    std::memcpy(unpacked_data, result_bytes.data(), result_bytes.size());
+    unpacked_size = result_bytes.size();
+}
+
+std::vector<uint16_t> PacketBuilder::Encryption::CAES::toUint16Array(const uint8_t *input, size_t length) {
+    std::vector<uint16_t> output((length + 1) / 2, 0); // +1 for padding in case of odd length
+    for (size_t i = 0; i < length; ++i) {
+        size_t index = i / 2;
+        if (i % 2 == 0) {
+            output[index] = input[i];
+        } else {
+            output[index] |= (input[i] << 8);
+        }
+    }
+    return output;
+}
+
+std::vector<uint8_t> PacketBuilder::Encryption::CAES::toUint8Array(const uint16_t *input, size_t length) {
+    std::vector<uint8_t> output(length * 2);
+    for (size_t i = 0; i < length; ++i) {
+        output[2 * i] = input[i] & 0xFF;
+        output[2 * i + 1] = (input[i] >> 8) & 0xFF;
+    }
+    return output;
+}
+
+uint16_t *PacketBuilder::Encryption::CAES::VectorToArray(const std::vector<unsigned char> &vec) {
+    size_t size = vec.size();
+    uint16_t* arr = new uint16_t[(size + 1) / 2];
+    std::memset(arr, 0, (size + 1) / 2 * sizeof(uint16_t)); // Zero initialize the array
+    for (size_t i = 0; i < size; ++i) {
+        if (i % 2 == 0) {
+            arr[i / 2] = vec[i];
+        } else {
+            arr[i / 2] |= (vec[i] << 8);
+        }
+    }
+    return arr;
+}
+
+std::vector<unsigned char> PacketBuilder::Encryption::CAES::ArrayToVector(const uint16_t *arr, size_t size) {
+    std::vector<unsigned char> vec(size * 2);
+    for (size_t i = 0; i < size; ++i) {
+        vec[2 * i] = arr[i] & 0xFF;
+        vec[2 * i + 1] = (arr[i] >> 8) & 0xFF;
+    }
+    return vec;
 }
 
 void PacketBuilder::Encryption::CAES::Init()
@@ -62,151 +125,142 @@ void PacketBuilder::Encryption::CAES::Init()
     }
 }
 
-unsigned char *PacketBuilder::Encryption::CAES::EncryptECB(const unsigned char in[], unsigned int inLen, const unsigned char key[]) {
-    unsigned int paddedLen = inLen + (blockBytesLen - inLen % blockBytesLen);
-    unsigned char *paddedIn = new unsigned char[paddedLen];
-    memcpy(paddedIn, in, inLen);
-    memset(paddedIn + inLen, paddedLen - inLen, paddedLen - inLen);
+std::vector<uint16_t> PacketBuilder::Encryption::CAES::EncryptECB(const uint16_t* in, size_t inLen, const unsigned char key[]) {
+    std::vector<uint8_t> inputBytes = toUint8Array(in, inLen);
+    size_t byteLen = inputBytes.size();
+    size_t paddedLen = byteLen + (blockBytesLen - byteLen % blockBytesLen);
+    inputBytes.resize(paddedLen, paddedLen - byteLen);
 
-    unsigned char *out = new unsigned char[paddedLen];
-    unsigned char *roundKeys = new unsigned char[4 * Nb * (Nr + 1)];
+    std::vector<uint8_t> outputBytes(paddedLen);
+    unsigned char* roundKeys = new unsigned char[4 * Nb * (Nr + 1)];
     KeyExpansion(key, roundKeys);
-    for (unsigned int i = 0; i < paddedLen; i += blockBytesLen) {
-        EncryptBlock(paddedIn + i, out + i, roundKeys);
+    for (size_t i = 0; i < paddedLen; i += blockBytesLen) {
+        EncryptBlock(inputBytes.data() + i, outputBytes.data() + i, roundKeys);
     }
 
     delete[] roundKeys;
-    delete[] paddedIn;
-
-    return out;
+    return toUint16Array(outputBytes.data(), paddedLen);
 }
 
-unsigned char *PacketBuilder::Encryption::CAES::DecryptECB(const unsigned char in[], unsigned int inLen, const unsigned char key[]) {
-    unsigned char *out = new unsigned char[inLen];
-    unsigned char *roundKeys = new unsigned char[4 * Nb * (Nr + 1)];
+std::vector<uint16_t> PacketBuilder::Encryption::CAES::DecryptECB(const uint16_t* in, size_t inLen, const unsigned char key[]) {
+    std::vector<uint8_t> inputBytes = toUint8Array(in, inLen);
+    size_t byteLen = inputBytes.size();
+
+    std::vector<uint8_t> outputBytes(byteLen);
+    unsigned char* roundKeys = new unsigned char[4 * Nb * (Nr + 1)];
     KeyExpansion(key, roundKeys);
-    for (unsigned int i = 0; i < inLen; i += blockBytesLen) {
-        DecryptBlock(in + i, out + i, roundKeys);
+    for (size_t i = 0; i < byteLen; i += blockBytesLen) {
+        DecryptBlock(inputBytes.data() + i, outputBytes.data() + i, roundKeys);
     }
 
-    unsigned int padding = out[inLen - 1];
+    unsigned int padding = outputBytes[byteLen - 1];
     if (padding < 1 || padding > blockBytesLen) {
         padding = 0;
     }
 
-    unsigned int dataLen = inLen - padding;
-    unsigned char *unpaddedOut = new unsigned char[dataLen];
-    memcpy(unpaddedOut, out, dataLen);
+    size_t dataLen = byteLen - padding;
+    outputBytes.resize(dataLen);
 
     delete[] roundKeys;
-    delete[] out;
-
-    return unpaddedOut;
+    return toUint16Array(outputBytes.data(), dataLen);
 }
 
+std::vector<uint16_t> PacketBuilder::Encryption::CAES::EncryptCBC(const uint16_t* in, size_t inLen, const unsigned char key[], const unsigned char* iv) {
+    std::vector<uint8_t> inputBytes = toUint8Array(in, inLen);
+    size_t byteLen = inputBytes.size();
+    size_t paddedLen = byteLen + (blockBytesLen - byteLen % blockBytesLen);
+    inputBytes.resize(paddedLen, paddedLen - byteLen);
 
-unsigned char *PacketBuilder::Encryption::CAES::EncryptCBC(const unsigned char in[], unsigned int inLen, const unsigned char key[], const unsigned char *iv) {
-    unsigned int paddedLen = inLen + (blockBytesLen - inLen % blockBytesLen);
-    unsigned char *paddedIn = new unsigned char[paddedLen];
-    memcpy(paddedIn, in, inLen);
-    memset(paddedIn + inLen, paddedLen - inLen, paddedLen - inLen);
-
-    unsigned char *out = new unsigned char[paddedLen];
-    unsigned char *roundKeys = new unsigned char[4 * Nb * (Nr + 1)];
-    unsigned char *block = new unsigned char[blockBytesLen];
-    unsigned char *currentIv = new unsigned char[blockBytesLen];
-    memcpy(currentIv, iv, blockBytesLen);
+    std::vector<uint8_t> outputBytes(paddedLen);
+    unsigned char* roundKeys = new unsigned char[4 * Nb * (Nr + 1)];
+    unsigned char block[blockBytesLen];
+    unsigned char currentIv[blockBytesLen];
+    std::memcpy(currentIv, iv, blockBytesLen);
     KeyExpansion(key, roundKeys);
 
-    for (unsigned int i = 0; i < paddedLen; i += blockBytesLen) {
-        XorBlocks(currentIv, paddedIn + i, block, blockBytesLen);
-        EncryptBlock(block, out + i, roundKeys);
-        memcpy(currentIv, out + i, blockBytesLen);
+    for (size_t i = 0; i < paddedLen; i += blockBytesLen) {
+        XorBlocks(currentIv, inputBytes.data() + i, block, blockBytesLen);
+        EncryptBlock(block, outputBytes.data() + i, roundKeys);
+        std::memcpy(currentIv, outputBytes.data() + i, blockBytesLen);
     }
 
     delete[] roundKeys;
-    delete[] paddedIn;
-    delete[] block;
-    delete[] currentIv;
-
-    return out;
+    return toUint16Array(outputBytes.data(), paddedLen);
 }
 
-unsigned char *PacketBuilder::Encryption::CAES::DecryptCBC(const unsigned char in[], unsigned int inLen, const unsigned char key[], const unsigned char *iv) {
-    unsigned char *out = new unsigned char[inLen];
-    unsigned char *roundKeys = new unsigned char[4 * Nb * (Nr + 1)];
-    unsigned char *block = new unsigned char[blockBytesLen];
-    unsigned char *currentIv = new unsigned char[blockBytesLen];
-    memcpy(currentIv, iv, blockBytesLen);
+std::vector<uint16_t> PacketBuilder::Encryption::CAES::DecryptCBC(const uint16_t* in, size_t inLen, const unsigned char key[], const unsigned char* iv) {
+    std::vector<uint8_t> inputBytes = toUint8Array(in, inLen);
+    size_t byteLen = inputBytes.size();
+
+    std::vector<uint8_t> outputBytes(byteLen);
+    unsigned char* roundKeys = new unsigned char[4 * Nb * (Nr + 1)];
+    unsigned char block[blockBytesLen];
+    unsigned char currentIv[blockBytesLen];
+    std::memcpy(currentIv, iv, blockBytesLen);
     KeyExpansion(key, roundKeys);
 
-    for (unsigned int i = 0; i < inLen; i += blockBytesLen) {
-        DecryptBlock(in + i, block, roundKeys);
-        XorBlocks(currentIv, block, out + i, blockBytesLen);
-        memcpy(currentIv, in + i, blockBytesLen);
+    for (size_t i = 0; i < byteLen; i += blockBytesLen) {
+        DecryptBlock(inputBytes.data() + i, block, roundKeys);
+        XorBlocks(currentIv, block, outputBytes.data() + i, blockBytesLen);
+        std::memcpy(currentIv, inputBytes.data() + i, blockBytesLen);
     }
 
-    unsigned int padding = out[inLen - 1];
+    unsigned int padding = outputBytes[byteLen - 1];
     if (padding < 1 || padding > blockBytesLen) {
         padding = 0;
     }
 
-    unsigned int dataLen = inLen - padding;
-    unsigned char *unpaddedOut = new unsigned char[dataLen];
-    memcpy(unpaddedOut, out, dataLen);
+    size_t dataLen = byteLen - padding;
+    outputBytes.resize(dataLen);
 
     delete[] roundKeys;
-    delete[] out;
-    delete[] block;
-    delete[] currentIv;
-
-    return unpaddedOut;
+    return toUint16Array(outputBytes.data(), dataLen);
 }
 
+std::vector<uint16_t> PacketBuilder::Encryption::CAES::EncryptCFB(const uint16_t* in, size_t inLen, const unsigned char key[], const unsigned char* iv) {
+    std::vector<uint8_t> inputBytes = toUint8Array(in, inLen);
+    size_t byteLen = inputBytes.size();
 
-unsigned char *PacketBuilder::Encryption::CAES::EncryptCFB(const unsigned char in[], unsigned int inLen, const unsigned char key[], const unsigned char *iv) {
-    unsigned char *out = new unsigned char[inLen];
-    unsigned char *roundKeys = new unsigned char[4 * Nb * (Nr + 1)];
-    unsigned char *block = new unsigned char[blockBytesLen];
-    unsigned char *currentIv = new unsigned char[blockBytesLen];
-    memcpy(currentIv, iv, blockBytesLen);
+    std::vector<uint8_t> outputBytes(byteLen);
+    unsigned char* roundKeys = new unsigned char[4 * Nb * (Nr + 1)];
+    unsigned char block[blockBytesLen];
+    unsigned char currentIv[blockBytesLen];
+    std::memcpy(currentIv, iv, blockBytesLen);
     KeyExpansion(key, roundKeys);
 
-    for (unsigned int i = 0; i < inLen; i += blockBytesLen) {
+    for (size_t i = 0; i < byteLen; i += blockBytesLen) {
         EncryptBlock(currentIv, block, roundKeys);
-        unsigned int blockSize = (inLen - i >= blockBytesLen) ? blockBytesLen : (inLen - i);
-        XorBlocks(in + i, block, out + i, blockSize);
-        memcpy(currentIv, out + i, blockBytesLen);
+        size_t blockSize = (byteLen - i >= blockBytesLen) ? blockBytesLen : (byteLen - i);
+        XorBlocks(inputBytes.data() + i, block, outputBytes.data() + i, blockSize);
+        std::memcpy(currentIv, outputBytes.data() + i, blockBytesLen);
     }
 
     delete[] roundKeys;
-    delete[] block;
-    delete[] currentIv;
-
-    return out;
+    return toUint16Array(outputBytes.data(), byteLen);
 }
 
-unsigned char *PacketBuilder::Encryption::CAES::DecryptCFB(const unsigned char in[], unsigned int inLen, const unsigned char key[], const unsigned char *iv) {
-    unsigned char *out = new unsigned char[inLen];
-    unsigned char *roundKeys = new unsigned char[4 * Nb * (Nr + 1)];
-    unsigned char *block = new unsigned char[blockBytesLen];
-    unsigned char *currentIv = new unsigned char[blockBytesLen];
-    memcpy(currentIv, iv, blockBytesLen);
+std::vector<uint16_t> PacketBuilder::Encryption::CAES::DecryptCFB(const uint16_t* in, size_t inLen, const unsigned char key[], const unsigned char* iv) {
+    std::vector<uint8_t> inputBytes = toUint8Array(in, inLen);
+    size_t byteLen = inputBytes.size();
+
+    std::vector<uint8_t> outputBytes(byteLen);
+    unsigned char* roundKeys = new unsigned char[4 * Nb * (Nr + 1)];
+    unsigned char block[blockBytesLen];
+    unsigned char currentIv[blockBytesLen];
+    std::memcpy(currentIv, iv, blockBytesLen);
     KeyExpansion(key, roundKeys);
 
-    for (unsigned int i = 0; i < inLen; i += blockBytesLen) {
+    for (size_t i = 0; i < byteLen; i += blockBytesLen) {
         EncryptBlock(currentIv, block, roundKeys);
-        unsigned int blockSize = (inLen - i >= blockBytesLen) ? blockBytesLen : (inLen - i);
-        XorBlocks(in + i, block, out + i, blockSize);
-        memcpy(currentIv, in + i, blockBytesLen);
+        size_t blockSize = (byteLen - i >= blockBytesLen) ? blockBytesLen : (byteLen - i);
+        XorBlocks(inputBytes.data() + i, block, outputBytes.data() + i, blockSize);
+        std::memcpy(currentIv, inputBytes.data() + i, blockBytesLen);
     }
 
     delete[] roundKeys;
-    delete[] block;
-    delete[] currentIv;
-
-    return out;
+    return toUint16Array(outputBytes.data(), byteLen);
 }
+
 
 
 void PacketBuilder::Encryption::CAES::CheckLength(unsigned int len) {
@@ -464,70 +518,49 @@ void PacketBuilder::Encryption::CAES::printHexVector(std::vector<unsigned char> 
     }
 }
 
-std::vector<unsigned char> PacketBuilder::Encryption::CAES::ArrayToVector(unsigned char *a,
-                                              unsigned int len) {
-    std::vector<unsigned char> v(a, a + len * sizeof(unsigned char));
-    return v;
-}
-
-unsigned char *PacketBuilder::Encryption::CAES::VectorToArray(std::vector<unsigned char> &a) {
-    return a.data();
-}
-
 std::vector<unsigned char> PacketBuilder::Encryption::CAES::EncryptECB(std::vector<unsigned char> in,
-                                           std::vector<unsigned char> key) {
-    unsigned char *out = EncryptECB(VectorToArray(in), (unsigned int)in.size(),
-                                    VectorToArray(key));
-    std::vector<unsigned char> v = ArrayToVector(out, in.size());
-    delete[] out;
+                                                                       std::vector<unsigned char> key) {
+    std::vector<uint16_t> out = EncryptECB(VectorToArray(in), in.size(), key.data());
+    std::vector<unsigned char> v = ArrayToVector(out.data(), (in.size() + 1) / 2);
     return v;
 }
 
 std::vector<unsigned char> PacketBuilder::Encryption::CAES::DecryptECB(std::vector<unsigned char> in,
-                                           std::vector<unsigned char> key) {
-    unsigned char *out = DecryptECB(VectorToArray(in), (unsigned int)in.size(),
-                                    VectorToArray(key));
-    std::vector<unsigned char> v = ArrayToVector(out, (unsigned int)in.size());
-    delete[] out;
+                                                                       std::vector<unsigned char> key) {
+    std::vector<uint16_t> out = DecryptECB(VectorToArray(in), in.size(), key.data());
+    std::vector<unsigned char> v = ArrayToVector(out.data(), (in.size() + 1) / 2);
     return v;
 }
 
 std::vector<unsigned char> PacketBuilder::Encryption::CAES::EncryptCBC(std::vector<unsigned char> in,
-                                           std::vector<unsigned char> key,
-                                           std::vector<unsigned char> iv) {
-    unsigned char *out = EncryptCBC(VectorToArray(in), (unsigned int)in.size(),
-                                    VectorToArray(key), VectorToArray(iv));
-    std::vector<unsigned char> v = ArrayToVector(out, in.size());
-    delete[] out;
+                                                                       std::vector<unsigned char> key,
+                                                                       std::vector<unsigned char> iv) {
+    std::vector<uint16_t> out = EncryptCBC(VectorToArray(in), in.size(), key.data(), iv.data());
+    std::vector<unsigned char> v = ArrayToVector(out.data(), (in.size() + 1) / 2);
     return v;
 }
 
 std::vector<unsigned char> PacketBuilder::Encryption::CAES::DecryptCBC(std::vector<unsigned char> in,
-                                           std::vector<unsigned char> key,
-                                           std::vector<unsigned char> iv) {
-    unsigned char *out = DecryptCBC(VectorToArray(in), (unsigned int)in.size(),
-                                    VectorToArray(key), VectorToArray(iv));
-    std::vector<unsigned char> v = ArrayToVector(out, (unsigned int)in.size());
-    delete[] out;
+                                                                       std::vector<unsigned char> key,
+                                                                       std::vector<unsigned char> iv) {
+    std::vector<uint16_t> out = DecryptCBC(VectorToArray(in), in.size(), key.data(), iv.data());
+    std::vector<unsigned char> v = ArrayToVector(out.data(), (in.size() + 1) / 2);
     return v;
 }
 
 std::vector<unsigned char> PacketBuilder::Encryption::CAES::EncryptCFB(std::vector<unsigned char> in,
-                                           std::vector<unsigned char> key,
-                                           std::vector<unsigned char> iv) {
-    unsigned char *out = EncryptCFB(VectorToArray(in), (unsigned int)in.size(),
-                                    VectorToArray(key), VectorToArray(iv));
-    std::vector<unsigned char> v = ArrayToVector(out, in.size());
-    delete[] out;
+                                                                       std::vector<unsigned char> key,
+                                                                       std::vector<unsigned char> iv) {
+    std::vector<uint16_t> out = EncryptCFB(VectorToArray(in), in.size(), key.data(), iv.data());
+    std::vector<unsigned char> v = ArrayToVector(out.data(), (in.size() + 1) / 2);
     return v;
 }
 
 std::vector<unsigned char> PacketBuilder::Encryption::CAES::DecryptCFB(std::vector<unsigned char> in,
-                                           std::vector<unsigned char> key,
-                                           std::vector<unsigned char> iv) {
-    unsigned char *out = DecryptCFB(VectorToArray(in), (unsigned int)in.size(),
-                                    VectorToArray(key), VectorToArray(iv));
-    std::vector<unsigned char> v = ArrayToVector(out, (unsigned int)in.size());
-    delete[] out;
+                                                                       std::vector<unsigned char> key,
+                                                                       std::vector<unsigned char> iv) {
+    std::vector<uint16_t> out = DecryptCFB(VectorToArray(in), in.size(), key.data(), iv.data());
+    std::vector<unsigned char> v = ArrayToVector(out.data(), (in.size() + 1) / 2);
     return v;
 }
+

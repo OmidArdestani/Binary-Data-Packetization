@@ -8,7 +8,7 @@
 
 #include <PacketBuilders/PacketBuilder.h>
 #include <vector>
-
+#include <cstdint>
 
 namespace PacketBuilder{
 namespace Encryption{
@@ -39,6 +39,11 @@ private:
     unsigned int Nr;
 
 private:
+    // Convert a uint8_t array to a uint16_t array
+    std::vector<uint16_t> toUint16Array(const uint8_t* input, size_t length);
+
+    // Convert a uint16_t array to a uint8_t array
+    std::vector<uint8_t> toUint8Array(const uint16_t* input, size_t length);
     void Init();
     void SubBytes(unsigned char state[4][Nb]);
     void ShiftRow(unsigned char state[4][Nb], unsigned int i,
@@ -62,21 +67,21 @@ private:
                       unsigned char key[]);
     void XorBlocks(const unsigned char *a, const unsigned char *b,
                    unsigned char *c, unsigned int len);
-    std::vector<unsigned char> ArrayToVector(unsigned char *a, unsigned int len);
-    unsigned char *VectorToArray(std::vector<unsigned char> &a);
+    std::vector<unsigned char> ArrayToVector(const uint16_t *arr, size_t size);
+    uint16_t *VectorToArray(const std::vector<unsigned char> &vec);
 
 public:
-    unsigned char *EncryptECB(const unsigned char in[], unsigned int inLen,
+    std::vector<uint16_t> EncryptECB(const uint16_t* in, size_t inLen,
                               const unsigned char key[]);
-    unsigned char *DecryptECB(const unsigned char in[], unsigned int inLen,
+    std::vector<uint16_t> DecryptECB(const uint16_t* in, size_t inLen,
                               const unsigned char key[]);
-    unsigned char *EncryptCBC(const unsigned char in[], unsigned int inLen,
+    std::vector<uint16_t> EncryptCBC(const uint16_t* in, size_t inLen,
                               const unsigned char key[], const unsigned char *iv);
-    unsigned char *DecryptCBC(const unsigned char in[], unsigned int inLen,
+    std::vector<uint16_t> DecryptCBC(const uint16_t* in, size_t inLen,
                               const unsigned char key[], const unsigned char *iv);
-    unsigned char *EncryptCFB(const unsigned char in[], unsigned int inLen,
+    std::vector<uint16_t> EncryptCFB(const uint16_t* in, size_t inLen,
                               const unsigned char key[], const unsigned char *iv);
-    unsigned char *DecryptCFB(const unsigned char in[], unsigned int inLen,
+    std::vector<uint16_t> DecryptCFB(const uint16_t* in, size_t inLen,
                               const unsigned char key[], const unsigned char *iv);
     std::vector<unsigned char> EncryptECB(std::vector<unsigned char> in,
                                           std::vector<unsigned char> key);
