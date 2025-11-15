@@ -24,7 +24,7 @@ compression.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, Iterable, List, Optional
+from typing import Callable, List, Optional
 import binascii
 import zlib
 
