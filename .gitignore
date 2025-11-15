@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# C#
+bin/
+obj/
+*.user
+*.suo
+*.userprefs
+.vs/
+
+# C++
+*.o
+*.obj
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+moc_*.cpp
+qrc_*.cpp
+ui_*.h
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
